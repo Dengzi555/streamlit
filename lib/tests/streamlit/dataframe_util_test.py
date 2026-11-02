@@ -43,6 +43,7 @@ from tests.streamlit.data_mocks.snowpark_mocks import Row as SnowparkRow
 from tests.streamlit.data_test_cases import (
     SHARED_TEST_CASES,
     CaseMetadata,
+    ElementDataClass,
     TestObject,
 )
 from tests.testutil import create_snowpark_session
@@ -1414,6 +1415,24 @@ def test_convert_pandas_df_to_data_format_requires_single_column_for_series_like
     df = pd.DataFrame({"a": [1], "b": [2]})
     with pytest.raises(StreamlitDataframeConversionError, match="single column"):
         dataframe_util.convert_pandas_df_to_data_format(df, fmt)
+
+
+def test_determine_data_format_for_list_of_dataclass_instances() -> None:
+    """A list of dataclass instances is a list of records, like a list of dicts."""
+    data = [
+        ElementDataClass("st.number_input", is_widget=True, usage=0.32),
+        ElementDataClass("st.text_area", is_widget=False, usage=0.5),
+    ]
+
+    data_format = dataframe_util.determine_data_format(data)
+    assert data_format is dataframe_util.DataFormat.LIST_OF_RECORDS
+
+    df = dataframe_util.convert_anything_to_pandas_df(data)
+    assert list(df.columns) == ["name", "is_widget", "usage"]
+    assert dataframe_util.convert_pandas_df_to_data_format(df, data_format) == [
+        {"name": "st.number_input", "is_widget": True, "usage": 0.32},
+        {"name": "st.text_area", "is_widget": False, "usage": 0.5},
+    ]
 
 
 @pytest.mark.require_integration

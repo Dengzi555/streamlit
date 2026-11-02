@@ -1486,7 +1486,11 @@ def determine_data_format(input_data: Any) -> DataFormat:
         # This should always contain at least one element,
         # otherwise the values type from infer_dtype would have been empty
         first_element = next(iter(input_data))
-        if isinstance(first_element, dict) or is_pydantic_model(first_element):
+        if (
+            isinstance(first_element, dict)
+            or is_pydantic_model(first_element)
+            or is_dataclass_instance(first_element)
+        ):
             return DataFormat.LIST_OF_RECORDS
         if isinstance(first_element, (list, tuple, set, frozenset)):
             return DataFormat.LIST_OF_ROWS

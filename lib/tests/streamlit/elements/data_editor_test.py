@@ -57,7 +57,11 @@ from streamlit.errors import StreamlitAPIException, StreamlitDataframeConversion
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
-from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
+from tests.streamlit.data_test_cases import (
+    SHARED_TEST_CASES,
+    CaseMetadata,
+    ElementDataClass,
+)
 from tests.streamlit.elements.layout_test_utils import (
     HeightConfigFields,
     WidthConfigFields,
@@ -1499,6 +1503,24 @@ class DataEditorTest(DeltaGeneratorTestCase):
             convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
         )
         pd.testing.assert_frame_equal(return_df, df)
+
+    def test_with_list_of_dataclass_instances(self):
+        """Test that a list of dataclass instances is accepted as records."""
+        data = [
+            ElementDataClass("st.number_input", is_widget=True, usage=0.32),
+            ElementDataClass("st.text_area", is_widget=False, usage=0.5),
+        ]
+
+        return_data = st.data_editor(data)
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        reconstructed_df = convert_arrow_bytes_to_pandas_df(proto.arrow_data.data)
+        assert list(reconstructed_df.columns) == ["name", "is_widget", "usage"]
+        assert len(reconstructed_df) == 2
+        assert return_data == [
+            {"name": "st.number_input", "is_widget": True, "usage": 0.32},
+            {"name": "st.text_area", "is_widget": False, "usage": 0.5},
+        ]
 
     @parameterized.expand(SHARED_TEST_CASES)
     def test_with_compatible_data(
